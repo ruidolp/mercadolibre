@@ -40,6 +40,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Token not found" }, { status: 404 });
     }
 
+    if (!row.refresh_token) {
+      return NextResponse.json(
+        { error: "Este token no tiene refresh_token. Reconecta la cuenta ML desde el Dashboard." },
+        { status: 400 }
+      );
+    }
+
     const tokenData = await refreshAccessToken(
       row.client_id,
       row.client_secret,

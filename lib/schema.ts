@@ -17,7 +17,7 @@ export interface MlTokensTable {
   app_id: string;
   ml_user_id: string;
   access_token: string;
-  refresh_token: string;
+  refresh_token: string | null;
   token_type: Generated<string>;
   expires_in: number;
   expires_at: Date;
