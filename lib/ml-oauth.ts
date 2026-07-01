@@ -2,13 +2,13 @@
 /**
  * MercadoLibre OAuth 2.0 helpers.
  *
- * Docs: https://developers.mercadolibre.com.ar/es_ar/autenticacion-y-autorizacion
+ * Docs: https://developers.mercadolibre.cl/es_cl/autenticacion-y-autorizacion
  *
- * The authorization URL varies by country site. We default to Argentina (.com.ar)
- * but all ML sites share the same token endpoint (api.mercadolibre.com).
+ * La URL de autorización es por país (auth.mercadolibre.cl para Chile).
+ * El endpoint de tokens es compartido por todos los países.
  */
 
-const ML_AUTH_URL = "https://auth.mercadolibre.com.ar/authorization";
+const ML_AUTH_URL = "https://auth.mercadolibre.cl/authorization";
 const ML_TOKEN_URL = "https://api.mercadolibre.com/oauth/token";
 
 export interface MLTokenResponse {
