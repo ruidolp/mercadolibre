@@ -77,10 +77,12 @@ async function fetchHighlights(
 
 function TrendSection({
   title,
+  description,
   trends,
   accentClass,
 }: {
   title: string;
+  description: string;
   trends: MLTrend[] | null;
   accentClass: string;
 }) {
@@ -90,6 +92,7 @@ function TrendSection({
         <h2 className="font-bold text-gray-900 text-sm uppercase tracking-wider">
           {title}
         </h2>
+        <p className="text-xs text-gray-600 mt-0.5">{description}</p>
       </div>
 
       {trends === null ? (
@@ -204,17 +207,20 @@ export default async function TrendsPage({
       {/* ------------------------------------------------------------------ */}
       <div className="grid gap-6 lg:grid-cols-3">
         <TrendSection
-          title="Más buscados"
-          trends={mostSearched}
-          accentClass="bg-[#FFE600]"
-        />
-        <TrendSection
           title="Mayor crecimiento"
+          description="Productos con el mayor aumento de ingresos en la última semana."
           trends={fastestGrowing}
           accentClass="bg-emerald-100"
         />
         <TrendSection
+          title="Más buscados"
+          description="Productos con el mayor volumen de búsqueda durante la última semana."
+          trends={mostSearched}
+          accentClass="bg-[#FFE600]"
+        />
+        <TrendSection
           title="Más populares"
+          description="Productos con alza significativa en búsquedas en la última semana vs. las dos semanas anteriores."
           trends={mostPopular}
           accentClass="bg-sky-100"
         />
