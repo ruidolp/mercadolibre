@@ -154,15 +154,20 @@ export default async function TrendsPage({
     ? "https://api.mercadolibre.com/trends/MLC"
     : `https://api.mercadolibre.com/trends/MLC/${categoryId}`;
 
-  // Todos los fetches en paralelo, todos con auth
-  const [categoryInfo, mostSearched, fastestGrowing, mostPopular, highlights] =
-    await Promise.all([
-      isGlobal ? Promise.resolve(null) : fetchCategoryInfo(categoryId, accessToken),
-      fetchTrends(baseUrl, accessToken),
-      fetchTrends(`${baseUrl}?type=fastest_growing`, accessToken),
-      fetchTrends(`${baseUrl}?type=most_popular`, accessToken),
-      !isGlobal && accessToken ? fetchHighlights(categoryId, accessToken) : Promise.resolve(null),
-    ]);
+  // Fetches en paralelo
+  const [categoryInfo, allTrends, highlights] = await Promise.all([
+    isGlobal ? Promise.resolve(null) : fetchCategoryInfo(categoryId, accessToken),
+    fetchTrends(baseUrl, accessToken),
+    !isGlobal && accessToken ? fetchHighlights(categoryId, accessToken) : Promise.resolve(null),
+  ]);
+
+  // ML devuelve 50 items en un solo array ordenado por posición:
+  // [0..9]  → mayor crecimiento (fastest growing)
+  // [10..29] → más buscados (most wanted)
+  // [30..49] → más populares (most popular)
+  const fastestGrowing = allTrends?.slice(0, 10) ?? null;
+  const mostSearched   = allTrends?.slice(10, 30) ?? null;
+  const mostPopular    = allTrends?.slice(30, 50) ?? null;
 
   const categoryName = isGlobal
     ? "Global"
