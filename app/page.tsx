@@ -44,10 +44,13 @@ const MLC_CATEGORIES_FALLBACK: MLCategory[] = [
 
 async function getCategories(token: string | null): Promise<{ categories: MLCategory[]; fromFallback: boolean }> {
   try {
+    const url = new URL("https://api.mercadolibre.com/sites/MLC/categories");
+    if (token) url.searchParams.set("access_token", token);
+
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch("https://api.mercadolibre.com/sites/MLC/categories", {
+    const res = await fetch(url.toString(), {
       cache: "no-store",
       signal: AbortSignal.timeout(5000),
       headers,

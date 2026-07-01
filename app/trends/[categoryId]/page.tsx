@@ -9,6 +9,13 @@ export const dynamic = "force-dynamic";
 // Fetch helpers
 // ---------------------------------------------------------------------------
 
+function withToken(url: string, token: string | null): string {
+  if (!token) return url;
+  const u = new URL(url);
+  u.searchParams.set("access_token", token);
+  return u.toString();
+}
+
 function authHeaders(token: string | null): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -16,7 +23,7 @@ function authHeaders(token: string | null): Record<string, string> {
 async function fetchCategoryInfo(categoryId: string, token: string | null): Promise<MLCategory | null> {
   try {
     const res = await fetch(
-      `https://api.mercadolibre.com/categories/${categoryId}`,
+      withToken(`https://api.mercadolibre.com/categories/${categoryId}`, token),
       { cache: "no-store", headers: authHeaders(token) }
     );
     if (!res.ok) return null;
@@ -28,7 +35,7 @@ async function fetchCategoryInfo(categoryId: string, token: string | null): Prom
 
 async function fetchTrends(url: string, token: string | null): Promise<MLTrend[] | null> {
   try {
-    const res = await fetch(url, { cache: "no-store", headers: authHeaders(token) });
+    const res = await fetch(withToken(url, token), { cache: "no-store", headers: authHeaders(token) });
     if (!res.ok) {
       console.error(`[fetchTrends] ${url} → ${res.status}`);
       return null;
