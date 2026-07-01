@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const apps = await db
       .selectFrom("ml_apps")
-      .select(["id", "name", "client_id", "redirect_uri", "created_at", "updated_at"])
+      .select(["id", "name", "client_id", "redirect_uri", "notifications_url", "created_at", "updated_at"])
       .orderBy("created_at", "desc")
       .execute();
 
@@ -28,7 +28,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, client_id, client_secret, redirect_uri } = body as Partial<NewMlApp>;
+    const { name, client_id, client_secret, redirect_uri, notifications_url } = body as Partial<NewMlApp>;
 
     if (!name || !client_id || !client_secret || !redirect_uri) {
       return NextResponse.json(
@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
 
     const app = await db
       .insertInto("ml_apps")
-      .values({ name, client_id, client_secret, redirect_uri })
-      .returning(["id", "name", "client_id", "redirect_uri", "created_at", "updated_at"])
+      .values({ name, client_id, client_secret, redirect_uri, notifications_url: notifications_url ?? null })
+      .returning(["id", "name", "client_id", "redirect_uri", "notifications_url", "created_at", "updated_at"])
       .executeTakeFirstOrThrow();
 
     return NextResponse.json(app, { status: 201 });

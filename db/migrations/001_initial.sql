@@ -11,9 +11,10 @@ CREATE TABLE IF NOT EXISTS ml_apps (
   name         TEXT NOT NULL,
   client_id    TEXT NOT NULL UNIQUE,
   client_secret TEXT NOT NULL,
-  redirect_uri  TEXT NOT NULL,
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  redirect_uri      TEXT NOT NULL,
+  notifications_url TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ============================================================

@@ -13,11 +13,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
   try {
     const body = await request.json();
-    const { name, client_id, client_secret, redirect_uri } = body as {
+    const { name, client_id, client_secret, redirect_uri, notifications_url } = body as {
       name?: string;
       client_id?: string;
       client_secret?: string;
       redirect_uri?: string;
+      notifications_url?: string | null;
     };
 
     // Build only the fields that were provided
@@ -28,13 +29,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (client_id !== undefined) updatePayload.client_id = client_id;
     if (client_secret !== undefined) updatePayload.client_secret = client_secret;
     if (redirect_uri !== undefined) updatePayload.redirect_uri = redirect_uri;
+    if (notifications_url !== undefined) updatePayload.notifications_url = notifications_url;
 
     const app = await db
       .updateTable("ml_apps")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .set(updatePayload as any)
       .where("id", "=", id)
-      .returning(["id", "name", "client_id", "redirect_uri", "updated_at"])
+      .returning(["id", "name", "client_id", "redirect_uri", "notifications_url", "updated_at"])
       .executeTakeFirst();
 
     if (!app) {

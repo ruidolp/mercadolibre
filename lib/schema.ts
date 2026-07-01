@@ -7,6 +7,7 @@ export interface MlAppsTable {
   client_id: string;
   client_secret: string;
   redirect_uri: string;
+  notifications_url: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }

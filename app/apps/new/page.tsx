@@ -9,6 +9,7 @@ interface FormState {
   client_id: string;
   client_secret: string;
   redirect_uri: string;
+  notifications_url: string;
 }
 
 export default function NewAppPage() {
@@ -18,6 +19,7 @@ export default function NewAppPage() {
     client_id: "",
     client_secret: "",
     redirect_uri: process.env.NEXT_PUBLIC_DEFAULT_REDIRECT_URI ?? "",
+    notifications_url: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,6 +153,27 @@ export default function NewAppPage() {
           />
           <p className="text-xs text-gray-400 mt-1">
             Debe coincidir exactamente con la URI registrada en ML Dev Center.
+          </p>
+        </div>
+
+        <div>
+          <label
+            htmlFor="notifications_url"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            URL de notificaciones
+          </label>
+          <input
+            id="notifications_url"
+            name="notifications_url"
+            type="url"
+            value={form.notifications_url}
+            onChange={handleChange}
+            placeholder="https://tu-dominio.com/api/notifications"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            ML envía webhooks aquí cuando hay cambios en órdenes, pagos, etc. Debe ser HTTPS.
           </p>
         </div>
 
