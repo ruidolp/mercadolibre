@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
-  const categoryId = request.nextUrl.searchParams.get("category") ?? "MLC1000";
+  const productId = request.nextUrl.searchParams.get("product") ?? "MLC47259580";
 
   const tokenRow = await db
     .selectFrom("ml_tokens")
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   if (!tokenRow) return NextResponse.json({ error: "No token in DB" }, { status: 401 });
 
   const token = tokenRow.access_token;
-  const url = `https://api.mercadolibre.com/highlights/MLC/category/${categoryId}?access_token=${token}`;
+  const url = `https://api.mercadolibre.com/products/${productId}?access_token=${token}`;
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -24,5 +24,5 @@ export async function GET(request: NextRequest) {
 
   const body: unknown = await res.json();
 
-  return NextResponse.json({ status: res.status, url, body });
+  return NextResponse.json({ status: res.status, url: url.replace(token, "TOKEN"), body });
 }
