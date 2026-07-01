@@ -38,6 +38,7 @@ export function buildAuthorizationUrl(
     response_type: "code",
     client_id: clientId,
     redirect_uri: redirectUri,
+    scope: "read write offline_access",
   });
 
   return `${ML_AUTH_URL}?${params.toString()}`;
