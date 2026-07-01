@@ -9,11 +9,15 @@ export const dynamic = "force-dynamic";
 // Fetch helpers
 // ---------------------------------------------------------------------------
 
-async function fetchCategoryInfo(categoryId: string): Promise<MLCategory | null> {
+function authHeaders(token: string | null): Record<string, string> {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function fetchCategoryInfo(categoryId: string, token: string | null): Promise<MLCategory | null> {
   try {
     const res = await fetch(
       `https://api.mercadolibre.com/categories/${categoryId}`,
-      { cache: "no-store" }
+      { cache: "no-store", headers: authHeaders(token) }
     );
     if (!res.ok) return null;
     return (await res.json()) as MLCategory;
@@ -22,10 +26,13 @@ async function fetchCategoryInfo(categoryId: string): Promise<MLCategory | null>
   }
 }
 
-async function fetchTrends(url: string): Promise<MLTrend[] | null> {
+async function fetchTrends(url: string, token: string | null): Promise<MLTrend[] | null> {
   try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return null;
+    const res = await fetch(url, { cache: "no-store", headers: authHeaders(token) });
+    if (!res.ok) {
+      console.error(`[fetchTrends] ${url} → ${res.status}`);
+      return null;
+    }
     const data: unknown = await res.json();
     return Array.isArray(data) ? (data as MLTrend[]) : null;
   } catch {
@@ -122,44 +129,37 @@ export default async function TrendsPage({
   const { categoryId } = await params;
   const isGlobal = categoryId === "global";
 
+  // Obtener token primero — lo necesitan trends, categorías e highlights
+  let accessToken: string | null = null;
+  try {
+    const tokenRow = await db
+      .selectFrom("ml_tokens")
+      .select(["access_token"])
+      .where("expires_at", ">", new Date())
+      .orderBy("updated_at", "desc")
+      .executeTakeFirst();
+    accessToken = tokenRow?.access_token ?? null;
+  } catch {
+    accessToken = null;
+  }
+
   const baseUrl = isGlobal
     ? "https://api.mercadolibre.com/trends/MLC"
     : `https://api.mercadolibre.com/trends/MLC/${categoryId}`;
 
-  // Run all trend fetches in parallel, plus optional category name lookup
-  const [categoryInfo, mostSearched, fastestGrowing, mostPopular] =
+  // Todos los fetches en paralelo, todos con auth
+  const [categoryInfo, mostSearched, fastestGrowing, mostPopular, highlights] =
     await Promise.all([
-      isGlobal ? Promise.resolve(null) : fetchCategoryInfo(categoryId),
-      fetchTrends(baseUrl),
-      fetchTrends(`${baseUrl}?type=fastest_growing`),
-      fetchTrends(`${baseUrl}?type=most_popular`),
+      isGlobal ? Promise.resolve(null) : fetchCategoryInfo(categoryId, accessToken),
+      fetchTrends(baseUrl, accessToken),
+      fetchTrends(`${baseUrl}?type=fastest_growing`, accessToken),
+      fetchTrends(`${baseUrl}?type=most_popular`, accessToken),
+      !isGlobal && accessToken ? fetchHighlights(categoryId, accessToken) : Promise.resolve(null),
     ]);
 
   const categoryName = isGlobal
     ? "Global"
     : (categoryInfo?.name ?? categoryId);
-
-  // Token lookup for highlights (DB may be unavailable — always wrapped in try/catch)
-  let accessToken: string | null = null;
-  if (!isGlobal) {
-    try {
-      const tokenRow = await db
-        .selectFrom("ml_tokens")
-        .select(["access_token"])
-        .where("expires_at", ">", new Date())
-        .orderBy("updated_at", "desc")
-        .executeTakeFirst();
-      accessToken = tokenRow?.access_token ?? null;
-    } catch {
-      accessToken = null;
-    }
-  }
-
-  // Fetch highlights only when a valid token exists
-  const highlights: MLHighlightItem[] | null =
-    !isGlobal && accessToken
-      ? await fetchHighlights(categoryId, accessToken)
-      : null;
 
   return (
     <div className="space-y-8">

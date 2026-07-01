@@ -1,7 +1,22 @@
 import Link from "next/link";
+import { db } from "@/lib/db";
 import type { MLCategory } from "@/lib/ml-types";
 
 export const dynamic = "force-dynamic";
+
+async function getAccessToken(): Promise<string | null> {
+  try {
+    const row = await db
+      .selectFrom("ml_tokens")
+      .select(["access_token"])
+      .where("expires_at", ">", new Date())
+      .orderBy("updated_at", "desc")
+      .executeTakeFirst();
+    return row?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // Categorías de MLC como fallback si la API no responde
 const MLC_CATEGORIES_FALLBACK: MLCategory[] = [
@@ -27,11 +42,15 @@ const MLC_CATEGORIES_FALLBACK: MLCategory[] = [
   { id: "MLC1182", name: "Antigüedades y Colecciones" },
 ];
 
-async function getCategories(): Promise<{ categories: MLCategory[]; fromFallback: boolean }> {
+async function getCategories(token: string | null): Promise<{ categories: MLCategory[]; fromFallback: boolean }> {
   try {
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const res = await fetch("https://api.mercadolibre.com/sites/MLC/categories", {
       cache: "no-store",
       signal: AbortSignal.timeout(5000),
+      headers,
     });
     if (!res.ok) {
       console.error(`[getCategories] ML API responded ${res.status}`);
@@ -49,7 +68,8 @@ async function getCategories(): Promise<{ categories: MLCategory[]; fromFallback
 }
 
 export default async function Home() {
-  const { categories, fromFallback } = await getCategories();
+  const token = await getAccessToken();
+  const { categories, fromFallback } = await getCategories(token);
 
   return (
     <div>
