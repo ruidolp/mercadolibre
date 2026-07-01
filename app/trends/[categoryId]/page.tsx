@@ -51,12 +51,6 @@ interface MLProductRaw {
   id: string;
   name?: string;
   pictures?: { url: string }[];
-  buy_box_winner?: {
-    price?: number;
-    currency_id?: string;
-    item_id?: string;
-    permalink?: string;
-  };
 }
 
 async function fetchProduct(id: string, token: string): Promise<MLHighlightItem | null> {
@@ -71,9 +65,10 @@ async function fetchProduct(id: string, token: string): Promise<MLHighlightItem 
       id: p.id,
       title: p.name ?? "",
       thumbnail: p.pictures?.[0]?.url ?? "",
-      price: p.buy_box_winner?.price ?? 0,
-      currency_id: p.buy_box_winner?.currency_id ?? "CLP",
-      permalink: p.buy_box_winner?.permalink ?? "",
+      price: 0,
+      currency_id: "CLP",
+      // ML usa https://www.mercadolibre.cl/p/{id} como URL canónica del producto
+      permalink: `https://www.mercadolibre.cl/p/${p.id}`,
     };
   } catch {
     return null;
@@ -330,21 +325,16 @@ export default async function TrendsPage({
                       />
                     )}
 
-                    {/* Title and price */}
+                    {/* Title */}
                     <div className="flex-1 min-w-0">
                       <a
                         href={item.permalink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-medium text-gray-800 hover:text-blue-600 truncate block"
+                        className="text-sm font-medium text-gray-800 hover:text-blue-600 line-clamp-2"
                       >
-                        {item.title ?? "Sin nombre"}
+                        {item.title || "Sin nombre"}
                       </a>
-                      {item.price != null && (
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {item.currency_id} {item.price.toLocaleString("es-CL")}
-                        </p>
-                      )}
                     </div>
                   </li>
                 ))}
