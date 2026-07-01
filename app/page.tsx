@@ -1,56 +1,79 @@
-// app/page.tsx
 import Link from "next/link";
+import type { MLCategory } from "@/lib/ml-types";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+async function getCategories(): Promise<MLCategory[] | null> {
+  try {
+    const res = await fetch("https://api.mercadolibre.com/sites/MLC/categories", {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data: unknown = await res.json();
+    return Array.isArray(data) ? (data as MLCategory[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function Home() {
+  const categories = await getCategories();
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-6">
-      <div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          MercadoLibre OAuth Core
-        </h1>
-        <p className="text-gray-500 text-lg max-w-md">
-          Plataforma centralizada para gestionar apps y tokens OAuth de
-          MercadoLibre.
+    <div>
+      {/* Page header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-[#FFE600] font-black text-gray-900 text-lg select-none">
+            ML
+          </span>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            MercadoLibre Insights
+          </h1>
+        </div>
+        <p className="text-gray-500 text-sm">
+          Explorá las tendencias de búsqueda por categoría
         </p>
       </div>
 
-      <div className="flex gap-4 mt-4">
-        <Link
-          href="/dashboard"
-          className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold px-6 py-3 rounded-lg transition-colors"
-        >
-          Ir al Dashboard
-        </Link>
-        <Link
-          href="/apps"
-          className="border border-gray-300 hover:bg-gray-100 text-gray-700 font-medium px-6 py-3 rounded-lg transition-colors"
-        >
-          Gestionar Apps
-        </Link>
-      </div>
+      {categories === null ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-10 text-center">
+          <p className="text-red-700 font-medium text-lg">
+            No se pudieron cargar las categorías
+          </p>
+          <p className="text-red-500 text-sm mt-1">
+            Revisá tu conexión o intentá de nuevo más tarde.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {/* GLOBAL card — visually distinct */}
+          <Link href="/trends/global" className="focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 rounded-xl">
+            <div className="group flex flex-col items-center justify-center gap-2 rounded-xl bg-[#FFE600] p-5 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 min-h-[120px]">
+              <span className="text-3xl" aria-hidden="true">🌎</span>
+              <span className="text-sm font-black text-gray-900 text-center uppercase tracking-wide">
+                Global
+              </span>
+            </div>
+          </Link>
 
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl text-left">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-800 mb-1">Apps registradas</h3>
-          <p className="text-sm text-gray-500">
-            Guarda las credenciales client_id / client_secret de cada app de ML.
-          </p>
+          {/* One card per category */}
+          {categories.map((cat) => (
+            <Link
+              key={cat.id}
+              href={`/trends/${cat.id}`}
+              className="focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 rounded-xl"
+            >
+              <div className="group flex flex-col items-center justify-center gap-2 rounded-xl bg-white p-5 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 min-h-[120px] border border-gray-100">
+                <span className="text-2xl" aria-hidden="true">🏷️</span>
+                <span className="text-xs font-medium text-gray-700 text-center leading-tight">
+                  {cat.name}
+                </span>
+              </div>
+            </Link>
+          ))}
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-800 mb-1">Flujo OAuth 2.0</h3>
-          <p className="text-sm text-gray-500">
-            Authorization Code Flow completo con soporte de refresh token
-            automático.
-          </p>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-800 mb-1">Tokens centralizados</h3>
-          <p className="text-sm text-gray-500">
-            Almacena y monitorea el estado de cada token con su fecha de
-            expiración.
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
