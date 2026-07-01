@@ -9,8 +9,10 @@ export interface MLTrend {
   url: string;
 }
 
-export interface MLHighlightId {
+export interface MLHighlightEntry {
   id: string;
+  position: number;
+  type: "PRODUCT" | "ITEM";
 }
 
 export interface MLHighlightItem {

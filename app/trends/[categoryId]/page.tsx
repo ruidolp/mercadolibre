@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { db } from "@/lib/db";
-import type { MLCategory, MLTrend, MLHighlightId, MLHighlightItem } from "@/lib/ml-types";
+import type { MLCategory, MLTrend, MLHighlightEntry, MLHighlightItem } from "@/lib/ml-types";
 
 export const dynamic = "force-dynamic";
 
@@ -47,54 +47,63 @@ async function fetchTrends(url: string, token: string | null): Promise<MLTrend[]
   }
 }
 
+interface MLProductRaw {
+  id: string;
+  name?: string;
+  pictures?: { url: string }[];
+  buy_box_winner?: {
+    price?: number;
+    currency_id?: string;
+    item_id?: string;
+    permalink?: string;
+  };
+}
+
+async function fetchProduct(id: string, token: string): Promise<MLHighlightItem | null> {
+  try {
+    const res = await fetch(
+      withToken(`https://api.mercadolibre.com/products/${id}`, token),
+      { headers: authHeaders(token), cache: "no-store" }
+    );
+    if (!res.ok) return null;
+    const p = (await res.json()) as MLProductRaw;
+    return {
+      id: p.id,
+      title: p.name ?? "",
+      thumbnail: p.pictures?.[0]?.url ?? "",
+      price: p.buy_box_winner?.price ?? 0,
+      currency_id: p.buy_box_winner?.currency_id ?? "CLP",
+      permalink: p.buy_box_winner?.permalink ?? "",
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchHighlights(
   categoryId: string,
   token: string
 ): Promise<MLHighlightItem[] | null> {
   try {
-    // Paso 1: obtener lista de IDs del ranking
-    const highlightsRes = await fetch(
+    const res = await fetch(
       withToken(`https://api.mercadolibre.com/highlights/MLC/category/${categoryId}`, token),
       { headers: authHeaders(token), cache: "no-store" }
     );
-    if (!highlightsRes.ok) {
-      console.error(`[fetchHighlights] highlights → ${highlightsRes.status}`);
+    if (!res.ok) {
+      console.error(`[fetchHighlights] → ${res.status}`);
       return null;
     }
-    const raw: unknown = await highlightsRes.json();
 
-    // Extraer array de IDs — puede venir como [{id}] o anidado
-    let ids: string[] = [];
-    if (Array.isArray(raw)) {
-      ids = (raw as MLHighlightId[]).map((x) => x.id).filter(Boolean);
-    } else {
-      const wrapped = raw as Record<string, unknown>;
-      const inner = wrapped?.content ?? wrapped?.items ?? wrapped?.results;
-      if (Array.isArray(inner)) {
-        ids = (inner as MLHighlightId[]).map((x) => x.id).filter(Boolean);
-      }
-    }
+    const raw = (await res.json()) as { content?: MLHighlightEntry[] };
+    const entries = raw?.content ?? [];
+    if (entries.length === 0) return null;
 
-    if (ids.length === 0) return null;
-
-    // Paso 2: multi-get de items para obtener título, foto y precio
-    const itemsRes = await fetch(
-      withToken(
-        `https://api.mercadolibre.com/items?ids=${ids.slice(0, 20).join(",")}&attributes=id,title,thumbnail,price,currency_id,permalink`,
-        token
-      ),
-      { headers: authHeaders(token), cache: "no-store" }
+    // Los IDs son de tipo PRODUCT — fetchear cada uno en paralelo
+    const products = await Promise.all(
+      entries.slice(0, 20).map((e) => fetchProduct(e.id, token))
     );
-    if (!itemsRes.ok) {
-      console.error(`[fetchHighlights] items multi-get → ${itemsRes.status}`);
-      return null;
-    }
 
-    // Multi-get devuelve [{code: 200, body: {...}}, ...]
-    const itemsRaw = (await itemsRes.json()) as Array<{ code: number; body: MLHighlightItem }>;
-    return itemsRaw
-      .filter((r) => r.code === 200 && r.body)
-      .map((r) => r.body);
+    return products.filter((p): p is MLHighlightItem => p !== null);
   } catch (err) {
     console.error("[fetchHighlights]", err);
     return null;
