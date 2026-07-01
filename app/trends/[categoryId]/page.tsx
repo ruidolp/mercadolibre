@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { db } from "@/lib/db";
-import type { MLCategory, MLTrend, MLHighlightItem } from "@/lib/ml-types";
+import type { MLCategory, MLTrend, MLHighlightId, MLHighlightItem } from "@/lib/ml-types";
 
 export const dynamic = "force-dynamic";
 
@@ -52,21 +52,51 @@ async function fetchHighlights(
   token: string
 ): Promise<MLHighlightItem[] | null> {
   try {
-    const res = await fetch(
-      `https://api.mercadolibre.com/highlights/MLC/category/${categoryId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      }
+    // Paso 1: obtener lista de IDs del ranking
+    const highlightsRes = await fetch(
+      withToken(`https://api.mercadolibre.com/highlights/MLC/category/${categoryId}`, token),
+      { headers: authHeaders(token), cache: "no-store" }
     );
-    if (!res.ok) return null;
-    const data: unknown = await res.json();
-    if (Array.isArray(data)) return data as MLHighlightItem[];
-    // Some ML endpoints wrap results
-    const wrapped = data as Record<string, unknown>;
-    const inner = wrapped?.content ?? wrapped?.items ?? wrapped?.results;
-    return Array.isArray(inner) ? (inner as MLHighlightItem[]) : null;
-  } catch {
+    if (!highlightsRes.ok) {
+      console.error(`[fetchHighlights] highlights → ${highlightsRes.status}`);
+      return null;
+    }
+    const raw: unknown = await highlightsRes.json();
+
+    // Extraer array de IDs — puede venir como [{id}] o anidado
+    let ids: string[] = [];
+    if (Array.isArray(raw)) {
+      ids = (raw as MLHighlightId[]).map((x) => x.id).filter(Boolean);
+    } else {
+      const wrapped = raw as Record<string, unknown>;
+      const inner = wrapped?.content ?? wrapped?.items ?? wrapped?.results;
+      if (Array.isArray(inner)) {
+        ids = (inner as MLHighlightId[]).map((x) => x.id).filter(Boolean);
+      }
+    }
+
+    if (ids.length === 0) return null;
+
+    // Paso 2: multi-get de items para obtener título, foto y precio
+    const itemsRes = await fetch(
+      withToken(
+        `https://api.mercadolibre.com/items?ids=${ids.slice(0, 20).join(",")}&attributes=id,title,thumbnail,price,currency_id,permalink`,
+        token
+      ),
+      { headers: authHeaders(token), cache: "no-store" }
+    );
+    if (!itemsRes.ok) {
+      console.error(`[fetchHighlights] items multi-get → ${itemsRes.status}`);
+      return null;
+    }
+
+    // Multi-get devuelve [{code: 200, body: {...}}, ...]
+    const itemsRaw = (await itemsRes.json()) as Array<{ code: number; body: MLHighlightItem }>;
+    return itemsRaw
+      .filter((r) => r.code === 200 && r.body)
+      .map((r) => r.body);
+  } catch (err) {
+    console.error("[fetchHighlights]", err);
     return null;
   }
 }
@@ -293,12 +323,17 @@ export default async function TrendsPage({
 
                     {/* Title and price */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">
+                      <a
+                        href={item.permalink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-gray-800 hover:text-blue-600 truncate block"
+                      >
                         {item.title ?? "Sin nombre"}
-                      </p>
-                      {item.price !== undefined && item.price !== null && (
+                      </a>
+                      {item.price != null && (
                         <p className="text-xs text-gray-500 mt-0.5">
-                          ${item.price.toLocaleString("es-CL")}
+                          {item.currency_id} {item.price.toLocaleString("es-CL")}
                         </p>
                       )}
                     </div>
