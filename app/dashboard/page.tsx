@@ -1,7 +1,8 @@
 // app/dashboard/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { MlApp, MlToken } from "@/lib/schema";
 
@@ -14,7 +15,19 @@ function isExpired(expiresAt: string | Date): boolean {
   return new Date() >= new Date(expiresAt);
 }
 
+function CallbackError() {
+  const searchParams = useSearchParams();
+  const callbackError = searchParams.get("error");
+  if (!callbackError) return null;
+  return (
+    <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
+      <strong>Error en el flujo OAuth:</strong> {decodeURIComponent(callbackError)}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
+
   const [apps, setApps] = useState<MlApp[]>([]);
   const [tokens, setTokens] = useState<TokenWithApp[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +112,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-10">
+      <Suspense fallback={null}>
+        <CallbackError />
+      </Suspense>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <Link

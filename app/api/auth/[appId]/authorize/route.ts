@@ -25,7 +25,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "App not found" }, { status: 404 });
     }
 
-    const authUrl = buildAuthorizationUrl(app.client_id, app.redirect_uri);
+    const authUrl = buildAuthorizationUrl(app.client_id, app.redirect_uri, appId);
 
     return NextResponse.redirect(authUrl);
   } catch (error) {

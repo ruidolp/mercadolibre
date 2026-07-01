@@ -32,7 +32,8 @@ export interface MLErrorResponse {
  */
 export function buildAuthorizationUrl(
   clientId: string,
-  redirectUri: string
+  redirectUri: string,
+  state?: string
 ): string {
   const params = new URLSearchParams({
     response_type: "code",
@@ -40,6 +41,7 @@ export function buildAuthorizationUrl(
     redirect_uri: redirectUri,
     scope: "read write offline_access",
   });
+  if (state) params.set("state", state);
 
   return `${ML_AUTH_URL}?${params.toString()}`;
 }
